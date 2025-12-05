@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Gallery Slider</title>
+  <script src="/_sdk/element_sdk.js"></script>
+
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 48px;
+      margin: 0 0 10px 0;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header p {
+      font-size: 20px;
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .gallery-wrapper {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    .gallery-container {
+      position: relative;
+      width: 100%;
+      height: 500px;
+      overflow: hidden;
+      border-radius: 15px;
+    }
+
+    .gallery-track {
+      display: flex;
+      transition: transform 0.5s ease-in-out;
+      height: 100%;
+    }
+
+    .gallery-item {
+      min-width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .gallery-item video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .gallery-item.image:hover img {
+      transform: scale(1.05);
+    }
+
+    .play-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .play-overlay svg {
+      width: 40px;
+      height: 40px;
+      fill: #667eea;
+      margin-left: 5px;
+    }
+
+    .gallery-item.video:hover .play-overlay {
+      transform: translate(-50%, -50%) scale(1.1);
+      background: white;
+    }
+
+    .gallery-item.video.playing .play-overlay {
+      opacity: 0;
+    }
+
+    .navigation {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .nav-button {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #667eea;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(102,126,234,0.4);
+    }
+
+    .nav-button:hover {
+      background: #764ba2;
+      transform: scale(1.1);
+    }
+
+    .nav-button:active {
+      transform: scale(0.95);
+    }
+
+    .dots-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ddd;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot.active {
+      background: #667eea;
+      transform: scale(1.3);
+    }
+
+    .dot:hover {
+      background: #764ba2;
+    }
+
+    .zoom-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .zoom-modal.active {
+      display: flex;
+    }
+
+    .zoom-modal img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: white;
+      border: none;
+      font-size: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      color: #333;
+    }
+
+    .close-modal:hover {
+      background: #667eea;
+      color: white;
+      transform: rotate(90deg);
+    }
+
+    .status-indicator {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .status-indicator.paused {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      .gallery-wrapper {
+        padding: 20px;
+      }
+
+      .gallery-container {
+        height: 300px;
+      }
+
+      .header h1 {
+        font-size: 32px;
+      }
+
+      .header p {
+        font-size: 16px;
+      }
+    }
+  </style>
+
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+ </head>
+
+ <body>
+  <div class="container">
+   <div class="header">
+    <h1 id="gallery-title">Media Gallery</h1>
+    <p id="gallery-subtitle">Images and Videos Collection</p>
+   </div>
+
+   <div class="gallery-wrapper">
+    <div class="gallery-container">
+     <div class="gallery-track" id="galleryTrack"></div>
+    </div>
+
+    <div class="navigation">
+     <button class="nav-button" id="prevBtn">‹</button>
+     <div class="dots-container" id="dotsContainer"></div>
+     <button class="nav-button" id="nextBtn">›</button>
+    </div>
+
+    <div class="status-indicator" id="statusIndicator">
+     Auto-scrolling active
+    </div>
+   </div>
+  </div>
+
+  <!-- Zoom Modal -->
+  <div class="zoom-modal" id="zoomModal">
+    <button class="close-modal" id="closeModal">×</button>
+    <img id="zoomedImage" src="" alt="Zoomed view" />
+  </div>
+
+  <script>
+    /* FIXED mediaItems (Commas Added) */
+    const mediaItems = [
+      { type: 'image', src: 'image/cod1.png' },
+      { type: 'image', src: 'image/cod2.png' },
+      { type: 'image', src: 'image/cod3.png' },
+      { type: 'video', src: 'image/vid1.mp4' },
+      { type: 'video', src: 'image/vid2.mp4' },
+      { type: 'video', src: 'image/vid3.mp4' }
+    ];
+
+    const defaultConfig = {
+      gallery_title: "Media Gallery",
+      gallery_subtitle: "Images and Videos Collection",
+      primary_color: "#667eea",
+      secondary_color: "#764ba2",
+      background_color: "#ffffff",
+      text_color: "#333333",
+      accent_color: "#f59e0b"
+    };
+
+    let config = {};
+
+    let currentIndex = 0;
+    let autoScrollTimer = null;
+    let isVideoPlaying = false;
+
+    function initGallery() {
+      const track = document.getElementById('galleryTrack');
+      const dotsContainer = document.getElementById('dotsContainer');
+
+      mediaItems.forEach((item, index) => {
+        const galleryItem = document.createElement('div');
+        galleryItem.className = `gallery-item ${item.type}`;
+        galleryItem.dataset.index = index;
+
+        if (item.type === 'image') {
+          const img = document.createElement('img');
+          img.src = item.src;
+          galleryItem.appendChild(img);
+          galleryItem.addEventListener('click', () => openZoomModal(item.src));
+        } else {
+          const video = document.createElement('video');
+          video.src = item.src;
+          galleryItem.appendChild(video);
+
+          const playOverlay = document.createElement('div');
+          playOverlay.className = 'play-overlay';
+          playOverlay.innerHTML = `
+            <svg viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          `;
+          galleryItem.appendChild(playOverlay);
+
+          galleryItem.addEventListener('click', () =>
+            toggleVideo(galleryItem, video, index)
+          );
+        }
+
+        track.appendChild(galleryItem);
+
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        if (index === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(index));
+
+        dotsContainer.appendChild(dot);
+      });
+
+      startAutoScroll();
+    }
+
+    function goToSlide(index) {
+      if (isVideoPlaying) return;
+      currentIndex = index;
+      document.getElementById('galleryTrack')
+        .style.transform = `translateX(-${index * 100}%)`;
+
+      document.querySelectorAll('.dot').forEach((dot, i) =>
+        dot.classList.toggle('active', i === index)
+      );
+    }
+
+    function nextSlide() {
+      if (isVideoPlaying) return;
+      currentIndex = (currentIndex + 1) % mediaItems.length;
+      goToSlide(currentIndex);
+    }
+
+    function prevSlide() {
+      if (isVideoPlaying) return;
+      currentIndex = (currentIndex - 1 + mediaItems.length) % mediaItems.length;
+      goToSlide(currentIndex);
+    }
+
+    function startAutoScroll() {
+      stopAutoScroll();
+      autoScrollTimer = setInterval(nextSlide, 3000);
+      updateStatusIndicator();
+    }
+
+    function stopAutoScroll() {
+      if (autoScrollTimer) clearInterval(autoScrollTimer);
+      autoScrollTimer = null;
+      updateStatusIndicator();
+    }
+
+    function updateStatusIndicator() {
+      const el = document.getElementById('statusIndicator');
+
+      if (isVideoPlaying) {
+        el.textContent = "🎬 Video playing - Auto-scroll paused";
+        el.className = "status-indicator paused";
+      } else {
+        el.textContent = "⟳ Auto-scrolling active";
+        el.className = "status-indicator";
+      }
+    }
+
+    function toggleVideo(item, video, index) {
+      if (isVideoPlaying) {
+        video.pause();
+        video.currentTime = 0;
+        item.classList.remove('playing');
+        isVideoPlaying = false;
+        startAutoScroll();
+      } else {
+        document.querySelectorAll('.gallery-item.video').forEach(v => {
+          const vid = v.querySelector("video");
+          vid.pause();
+          vid.currentTime = 0;
+          v.classList.remove("playing");
+        });
+
+        item.classList.add("playing");
+        isVideoPlaying = true;
+        stopAutoScroll();
+
+        video.play();
+        video.onended = () => {
+          item.classList.remove("playing");
+          isVideoPlaying = false;
+          startAutoScroll();
+          nextSlide();
+        };
+      }
+    }
+
+    function openZoomModal(src) {
+      document.getElementById('zoomedImage').src = src;
+      document.getElementById('zoomModal').classList.add('active');
+      isVideoPlaying = true;
+      stopAutoScroll();
+    }
+
+    function closeZoomModal() {
+      document.getElementById('zoomModal').classList.remove('active');
+      isVideoPlaying = false;
+      startAutoScroll();
+    }
+
+    document.getElementById('prevBtn').onclick = prevSlide;
+    document.getElementById('nextBtn').onclick = nextSlide;
+    document.getElementById('closeModal').onclick = closeZoomModal;
+
+    document.getElementById('zoomModal').onclick = (e) => {
+      if (e.target.id === "zoomModal") closeZoomModal();
+    };
+
+    initGallery();
+  </script>
+
+ </body>
+</html>
